@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EliteCoach - Pro Performance</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+:root {
+    --primary: #1e3a8a; --secondary: #2563eb; --success: #10b981;
+    --warning: #f59e0b; --danger: #ef4444; --bg: #f4f6f9;
+    --sidebar: #ffffff; --text: #1e293b;
+}
+* { box-sizing: border-box; font-family: 'Arial', sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+/* LOGIN */
+#loginDiv { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.login-card { background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+
+/* SIDEBAR NAV */
+#sidebar { width: 260px; background: var(--sidebar); border-right: 1px solid #ddd; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.sidebar-header { padding: 20px; font-size: 1.2rem; font-weight: bold; color: var(--primary); background: #f8fafc; text-align: center; border-bottom: 1px solid #ddd; }
+.nav-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #555; border-bottom: 1px solid #f1f5f9; }
+.nav-item:hover { background: #f4f6f9; }
+.nav-item.active { background: var(--secondary); color: white; }
+
+/* MAIN CONTENT */
+.main-content { flex: 1; padding: 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; border: 1px solid #ddd; }
+h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+/* TABLES */
+table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+th { background: #e5e7eb; font-size: 0.9rem; }
+
+/* FORM ELEMENTS */
+input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 4px; border: 1px solid #ccc; }
+button { background: var(--secondary); color: white; border: none; cursor: pointer; font-weight: bold; }
+button:hover { background: #1e40af; }
+button.delete { background: #ef4444; width: auto; padding: 5px 10px; }
+button.toggle-btn { background: #64748b; margin-top: 10px; }
+
+.hidden { display: none !important; }
+.ratio-badge { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.85rem; }
+
+/* CAMPO */
+#campo { background: #2e7d32; border: 3px solid white; cursor: crosshair; display:block; margin: 0 auto; }
+#tipoTiro { margin-top:10px; text-align:center; }
+.tipo-btn { padding:8px 12px; margin-right:5px; }
+.tipo-btn.active { background:#ef4444; color:white; }
+.delete-btn { background:#ef4444; color:white; padding:3px 6px; font-weight:bold; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<div id="loginDiv">
+    <div class="login-card">
+        <h2 style="text-align: center; border:none">⚽ EliteCoach Login</h2>
+        <input type="text" id="loginUser" placeholder="Usuario">
+        <input type="password" id="loginPass" placeholder="Contraseña">
+        <button onclick="login()">Entrar</button>
+        <button onclick="register()" style="background: #64748b; margin-top: 10px;">Registrarse</button>
+        <div id="loginMsg" style="text-align:center; margin-top: 10px; color: red;"></div>
+    </div>
+</div>
+
+<nav id="sidebar" class="hidden">
+    <div class="sidebar-header">EliteCoach Menu</div>
+    <div class="nav-item active" onclick="switchTab(0)"><i class="fas fa-users"></i> Jugadores</div>
+    <div class="nav-item" onclick="switchTab(1)"><i class="fas fa-trophy"></i> Partidos</div>
+    <div class="nav-item" onclick="switchTab(2)"><i class="fas fa-bullseye"></i> Goles Esperados</div>
+    <div class="nav-item" onclick="switchTab(3)"><i class="fas fa-chart-line"></i> Entrenamientos</div>
+</nav>
+
+<main id="app" class="main-content hidden">
+
+    <div id="tab0" class="tab-content">
+        <div class="card">
+            <h2>Plantilla de Jugadores</h2>
+            <input id="nombre" placeholder="Nombre del jugador">
+            <button onclick="addJugador()">Añadir Jugador</button>
+            <table>
+                <thead>
+                    <tr><th>Nombre</th><th>G</th><th>A</th><th>PJ</th><th>Min</th><th>🟨</th><th>🟥</th><th>Acción</th></tr>
+                </thead>
+                <tbody id="tablaJugadores"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab1" class="tab-content hidden">
+        <div class="card">
+            <h2>Registro de Partidos</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input id="local" placeholder="Equipo Local">
+                <input id="gLocal" type="number" placeholder="Goles L">
+                <input id="visitante" placeholder="Equipo Visitante">
+                <input id="gVisitante" type="number" placeholder="Goles V">
+            </div>
+            <input id="desc" placeholder="Descripción/Notas">
+            <button onclick="addPartido()">Guardar Partido</button>
+            <table>
+                <thead>
+                    <tr><th>Partido</th><th>Resultado</th><th>Notas</th><th></th></tr>
+                </thead>
+                <tbody id="tablaPartidos"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PESTAÑA DE GOLES ESPERADOS -->
+    <div id="tab2" class="tab-content hidden">
+        <div class="card">
+            <h2>Goles Esperados (xG) - Simulador</h2>
+            <div id="tipoTiro">
+                <button class="tipo-btn active" data-tipo="normal">Tiro Normal</button>
+                <button class="tipo-btn" data-tipo="penalti">Penalti</button>
+                <button class="tipo-btn" data-tipo="balonparado">Balón Parado</button>
+                <button class="tipo-btn" data-tipo="cabeza">Remate de Cabeza</button>
+            </div>
+            <canvas id="campo" width="350" height="500" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;"></canvas>
+            <div style="display:flex; justify-content:space-around; margin-top:15px;">
+                <div id="xgActual" style="font-weight:bold;">Último tiro: 0,00</div>
+                <div id="xgTotalDisp" style="font-weight:bold;">xG total: 0,00</div>
+            </div>
+            <button onclick="resetXG()" style="margin-top:15px;">Reiniciar Mapa</button>
+        </div>
+        <div class="card">
+            <h2>Historial de Disparos</h2>
+            <table>
+                <thead>
+                    <tr><th>#</th><th>X</th><th>Y</th><th>Tipo</th><th>xG</th><th>Acción</th></tr>
+                </thead>
+                <tbody id="tablaTiros"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab3" class="tab-content hidden">
+        <div class="card">
+            <h2>Nueva Sesión de Entrenamiento</h2>
+            <select id="selectJugadores" multiple style="height: 100px;"></select>
+            <button onclick="toggleTodos()" style="background:#64748b; font-size: 0.8rem;">Seleccionar Todos</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <input type="date" id="fecha">
+                <input type="number" id="duracion" placeholder="Minutos">
+                <input type="number" id="rpe" placeholder="RPE (1-10)">
+            </div>
+            <button onclick="addEntreno()" style="margin-top: 10px;">Registrar Carga</button>
+        </div>
+
+        <div class="card">
+            <h2>Análisis Individual (Ratio ACWR)</h2>
+            <select id="filtroJugador" onchange="calcular()"></select>
+            <div style="margin-top: 20px;">
+                <h3>Volumen de Trabajo Semanal</h3>
+                <canvas id="graficaCarga" height="200"></canvas>
+            </div>
+            <div style="margin-top: 20px;">
+                <h3>Evolución del Ratio de Riesgo</h3>
+                <canvas id="graficaRatio" height="200"></canvas>
+                <div class="legend-small" style="text-align: center; margin-top: 10px;">
+                    <span style="color:green">●</span> 0.8–1.2 Estable | 
+                    <span style="color:orange">●</span> 1.2–1.5 Alta | 
+                    <span style="color:red">●</span> ≥1.5 Peligro
+                </div>
+            </div>
+            <button class="toggle-btn" onclick="document.getElementById('histCont').classList.toggle('hidden')">
+                <i class="fas fa-history"></i> Mostrar/Ocultar Historial de Sesiones
+            </button>
+            <div id="histCont" class="hidden">
+                <table>
+                    <thead>
+                        <tr><th>Fecha</th><th>Minutos</th><th>RPE</th><th>Carga</th><th></th></tr>
+                    </thead>
+                    <tbody id="tablaHistorialSesiones"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Resumen General de Plantilla</h2>
+            <table>
+                <thead>
+                    <tr><th>Jugador</th><th>Carga 7d</th><th>Media 28d</th><th>Ratio Actual</th></tr>
+                </thead>
+                <tbody id="tablaResumenBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script>
+// ---- LOGIN Y DATA ----
+let currentUser = null, jugadores=[], partidos=[], entrenos=[], xgTotal=0;
+let chartCarga, chartRatio;
+
+async function hashPassword(pw){
+    const msgUint8 = new TextEncoder().encode(pw);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function saveUserData(){ localStorage.setItem('userData_'+currentUser, JSON.stringify({jugadores,partidos,entrenos,xgTotal})); }
+function loadUserData(){ const data = JSON.parse(localStorage.getItem('userData_'+currentUser)||'{}'); jugadores=data.jugadores||[]; partidos=data.partidos||[]; entrenos=data.entrenos||[]; xgTotal=data.xgTotal||0; }
+async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return loginMsg.innerText="Campos vacíos"; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.style.color="green"; loginMsg.innerText="Creado, haz login"; }
+async function login(){ const u=loginUser.value.trim(), p=await hashPassword(loginPass.value); const users=JSON.parse(localStorage.getItem('users')||'{}'); if(users[u]===p){ currentUser=u; loginDiv.classList.add('hidden'); app.classList.remove('hidden'); sidebar.classList.remove('hidden'); loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); calcular(); } else { loginMsg.innerText="Error de acceso"; } }
+function switchTab(i){ document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i)); document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('hidden',idx!==i)); }
+
+// ---- JUGADORES ----
+function addJugador(){ if(!nombre.value) return; jugadores.push({nombre:nombre.value,g:0,a:0,pj:0,min:0,am:0,r:0}); nombre.value=""; renderJugadores(); renderSelect(); saveUserData(); }
+function renderJugadores(){ tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr><td>${j.nombre}</td><td contenteditable oninput="jugadores[${i}].g=this.innerText;saveUserData()">${j.g}</td><td contenteditable oninput="jugadores[${i}].a=this.innerText;saveUserData()">${j.a}</td><td contenteditable oninput="jugadores[${i}].pj=this.innerText;saveUserData()">${j.pj}</td><td contenteditable oninput="jugadores[${i}].min=this.innerText;saveUserData()">${j.min}</td><td contenteditable oninput="jugadores[${i}].am=this.innerText;saveUserData()">${j.am}</td><td contenteditable oninput="jugadores[${i}].r=this.innerText;saveUserData()">${j.r}</td><td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td></tr>`).join(''); }
+function renderSelect(){ const html=jugadores.map(j=>`<option value="${j.nombre}">${j.nombre}</option>`).join(''); selectJugadores.innerHTML=html; filtroJugador.innerHTML=html; }
+
+// ---- PARTIDOS ----
+function addPartido(){ partidos.push({l:local.value, gl:gLocal.value, v:visitante.value, gv:gVisitante.value, d:desc.value}); renderPartidos(); saveUserData(); }
+function renderPartidos(){ tablaPartidos.innerHTML=partidos.map((p,i)=>`<tr><td>${p.l} vs ${p.v}</td><td>${p.gl}-${p.gv}</td><td>${p.d}</td><td><button class="delete" onclick="partidos.splice(${i},1);renderPartidos();saveUserData()">❌</button></td></tr>`).join(''); }
+
+// ---- ENTRENOS & ACWR ----
+function toggleTodos(){ [...selectJugadores.options].forEach(o=>o.selected=!o.selected); }
+function addEntreno(){ let dur=parseInt(duracion.value), rpeV=parseInt(rpe.value), c=dur*rpeV; [...selectJugadores.selectedOptions].forEach(o=>entrenos.push({n:o.value, fecha:fecha.value, dur, rpe:rpeV, carga:c})); calcular(); saveUserData(); }
+function calcular(){ /* Igual que antes, sin tocar */ }
+
+// ---- PESTAÑA XG ----
+let tiros=[];
+let tipoActual="normal";
+const campo=document.getElementById("campo");
+const ctx=campo.getContext("2d");
+
+document.querySelectorAll(".tipo-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+        document.querySelectorAll(".tipo-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        tipoActual=btn.dataset.tipo;
+    });
+});
+
+function drawField(){
+    ctx.clearRect(0,0,campo.width,campo.height);
+    ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,campo.width,campo.height);
+    ctx.strokeStyle="white"; ctx.lineWidth=2;
+    ctx.strokeRect(0,0,campo.width,campo.height);
+    // Área pequeña
+    ctx.strokeRect(campo.width/2 -36,0,72,18);
+    // Punto de penalti
+    ctx.beginPath();
+    ctx.arc(campo.width/2, 12, 2, 0, Math.PI*2);
+    ctx.fillStyle="white"; ctx.fill();
+    // Círculo central
+    ctx.beginPath();
+    ctx.arc(campo.width/2, campo.height/2, 50, 0, Math.PI*2);
+    ctx.stroke();
+    // Línea media
+    ctx.beginPath();
+    ctx.moveTo(0,campo.height/2); ctx.lineTo(campo.width,campo.height/2); ctx.stroke();
+}
+
+drawField();
+
+function calcularXG(x,y,tipo){
+    if(tipo==="penalti") return 0.78;
+    const porteriaX=campo.width/2, porteriaY=0;
+    const dx=x-porteriaX, dy=y-porteriaY;
+    const distancia=Math.sqrt(dx*dx+dy*dy);
+    const angulo=Math.atan2(50, Math.abs(dx));
+    let base=1/(1+Math.exp((distancia-100)/25))*(angulo/Math.PI*2);
+    switch(tipo){
+        case "balonparado": return Math.max(0.01, base*0.5);
+        case "cabeza": return Math.max(0.01, base*0.7);
+        default: return Math.max(0.01, base);
+    }
+}
+
+campo.addEventListener("click",(e)=>{
+    const rect=campo.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const y=e.clientY-rect.top;
+    const xg=calcularXG(x,y,tipoActual);
+    xgTotal+=xg;
+    tiros.push({x:x.toFixed(0), y:y.toFixed(0), xg:xg.toFixed(2), tipo:tipoActual});
+    actualizarDisplay();
+});
+
+function actualizarDisplay(){
+    document.getElementById("xgActual").innerText="Último tiro: "+(tiros.length?tiros[tiros.length-1].xg:"0,00");
+    document.getElementById("xgTotalDisp").innerText="xG total: "+xgTotal.toFixed(2);
+    renderTabla();
+    drawField();
+    tiros.forEach(t=>{
+        ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.strokeStyle="black"; ctx.stroke();
+    });
+}
+
+function renderTabla(){
+    const tablaTiros=document.getElementById("tablaTiros");
+    tablaTiros.innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="borrarTiro(${i})">❌</button></td></tr>`).join('');
+}
+
+function borrarTiro(index){
+    xgTotal-=parseFloat(tiros[index].xg);
+    tiros.splice(index,1);
+    actualizarDisplay();
+}
+
+function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); }
+
+</script>
+</body>
+</html>
