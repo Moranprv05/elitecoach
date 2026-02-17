@@ -111,7 +111,6 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
         </div>
     </div>
 
-    <!-- PESTAÑA DE GOLES ESPERADOS -->
     <div id="tab2" class="tab-content hidden">
         <div class="card">
             <h2>Goles Esperados (xG) - Simulador</h2>
@@ -222,7 +221,7 @@ function renderPartidos(){ tablaPartidos.innerHTML=partidos.map((p,i)=>`<tr><td>
 // ---- ENTRENOS & ACWR ----
 function toggleTodos(){ [...selectJugadores.options].forEach(o=>o.selected=!o.selected); }
 function addEntreno(){ let dur=parseInt(duracion.value), rpeV=parseInt(rpe.value), c=dur*rpeV; [...selectJugadores.selectedOptions].forEach(o=>entrenos.push({n:o.value, fecha:fecha.value, dur, rpe:rpeV, carga:c})); calcular(); saveUserData(); }
-function calcular(){ /* Igual que antes, sin tocar */ }
+function calcular(){ /* tu código existente de ACWR */ }
 
 // ---- PESTAÑA XG ----
 let tiros=[];
@@ -308,5 +307,15 @@ function borrarTiro(index){
 function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); }
 
 </script>
+
+<!-- --- Service Worker Registration --- -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('Service Worker registrado'))
+    .catch(err => console.log('Error registrando Service Worker:', err));
+}
+</script>
+
 </body>
 </html>
