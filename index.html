@@ -15,28 +15,23 @@
 * { box-sizing: border-box; font-family: 'Arial', sans-serif; }
 body { margin: 0; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
 
-/* LOGIN */
 #loginDiv { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .login-card { background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
 
-/* SIDEBAR NAV */
 #sidebar { width: 260px; background: var(--sidebar); border-right: 1px solid #ddd; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .sidebar-header { padding: 20px; font-size: 1.2rem; font-weight: bold; color: var(--primary); background: #f8fafc; text-align: center; border-bottom: 1px solid #ddd; }
 .nav-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #555; border-bottom: 1px solid #f1f5f9; }
 .nav-item:hover { background: #f4f6f9; }
 .nav-item.active { background: var(--secondary); color: white; }
 
-/* MAIN CONTENT */
 .main-content { flex: 1; padding: 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
 .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; border: 1px solid #ddd; }
 h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; border-bottom: 2px solid #eee; padding-bottom: 10px; }
 
-/* TABLES */
 table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
 th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
 th { background: #e5e7eb; font-size: 0.9rem; }
 
-/* FORM ELEMENTS */
 input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 4px; border: 1px solid #ccc; }
 button { background: var(--secondary); color: white; border: none; cursor: pointer; font-weight: bold; }
 button:hover { background: #1e40af; }
@@ -44,12 +39,10 @@ button.delete { background: #ef4444; width: auto; padding: 5px 10px; }
 button.toggle-btn { background: #64748b; margin-top: 10px; }
 
 .hidden { display: none !important; }
-.ratio-badge { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.85rem; }
 
-/* CAMPO */
 #campo { background: #2e7d32; border: 3px solid white; cursor: crosshair; display:block; margin: 0 auto; }
 #tipoTiro { margin-top:10px; text-align:center; }
-.tipo-btn { padding:8px 12px; margin-right:5px; }
+.tipo-btn { padding:8px 12px; margin-right:5px; width: auto; display: inline-block; }
 .tipo-btn.active { background:#ef4444; color:white; }
 .delete-btn { background:#ef4444; color:white; padding:3px 6px; font-weight:bold; border-radius:3px; }
 </style>
@@ -76,7 +69,6 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
 </nav>
 
 <main id="app" class="main-content hidden">
-
     <div id="tab0" class="tab-content">
         <div class="card">
             <h2>Plantilla de Jugadores</h2>
@@ -120,7 +112,7 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
                 <button class="tipo-btn" data-tipo="balonparado">Balón Parado</button>
                 <button class="tipo-btn" data-tipo="cabeza">Remate de Cabeza</button>
             </div>
-            <canvas id="campo" width="350" height="500" style="margin-top:15px; display:block; margin-left:auto; margin-right:auto;"></canvas>
+            <canvas id="campo" width="350" height="500" style="margin-top:15px;"></canvas>
             <div style="display:flex; justify-content:space-around; margin-top:15px;">
                 <div id="xgActual" style="font-weight:bold;">Último tiro: 0,00</div>
                 <div id="xgTotalDisp" style="font-weight:bold;">xG total: 0,00</div>
@@ -142,7 +134,7 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
         <div class="card">
             <h2>Nueva Sesión de Entrenamiento</h2>
             <select id="selectJugadores" multiple style="height: 100px;"></select>
-            <button onclick="toggleTodos()" style="background:#64748b; font-size: 0.8rem;">Seleccionar Todos</button>
+            <button onclick="toggleTodos()" style="background:#64748b; font-size: 0.8rem; width: auto;">Seleccionar Todos</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
                 <input type="date" id="fecha">
                 <input type="number" id="duracion" placeholder="Minutos">
@@ -150,172 +142,141 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
             </div>
             <button onclick="addEntreno()" style="margin-top: 10px;">Registrar Carga</button>
         </div>
-
         <div class="card">
-            <h2>Análisis Individual (Ratio ACWR)</h2>
+            <h2>Análisis de Carga</h2>
             <select id="filtroJugador" onchange="calcular()"></select>
-            <div style="margin-top: 20px;">
-                <h3>Volumen de Trabajo Semanal</h3>
-                <canvas id="graficaCarga" height="200"></canvas>
-            </div>
-            <div style="margin-top: 20px;">
-                <h3>Evolución del Ratio de Riesgo</h3>
-                <canvas id="graficaRatio" height="200"></canvas>
-                <div class="legend-small" style="text-align: center; margin-top: 10px;">
-                    <span style="color:green">●</span> 0.8–1.2 Estable | 
-                    <span style="color:orange">●</span> 1.2–1.5 Alta | 
-                    <span style="color:red">●</span> ≥1.5 Peligro
-                </div>
-            </div>
-            <button class="toggle-btn" onclick="document.getElementById('histCont').classList.toggle('hidden')">
-                <i class="fas fa-history"></i> Mostrar/Ocultar Historial de Sesiones
-            </button>
-            <div id="histCont" class="hidden">
-                <table>
-                    <thead>
-                        <tr><th>Fecha</th><th>Minutos</th><th>RPE</th><th>Carga</th><th></th></tr>
-                    </thead>
-                    <tbody id="tablaHistorialSesiones"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Resumen General de Plantilla</h2>
-            <table>
-                <thead>
-                    <tr><th>Jugador</th><th>Carga 7d</th><th>Media 28d</th><th>Ratio Actual</th></tr>
-                </thead>
-                <tbody id="tablaResumenBody"></tbody>
-            </table>
+            <canvas id="graficaCarga" height="150" style="margin-top:20px;"></canvas>
+            <canvas id="graficaRatio" height="150" style="margin-top:20px;"></canvas>
         </div>
     </div>
-
 </main>
 
 <script>
-// ---- LOGIN Y DATA ----
-let currentUser = null, jugadores=[], partidos=[], entrenos=[], xgTotal=0;
+let currentUser = null, jugadores=[], partidos=[], entrenos=[], xgTotal=0, tiros=[];
 let chartCarga, chartRatio;
+let tipoActual = "normal";
+
+function saveUserData(){ localStorage.setItem('userData_'+currentUser, JSON.stringify({jugadores,partidos,entrenos,xgTotal,tiros})); }
+function loadUserData(){ 
+    const data = JSON.parse(localStorage.getItem('userData_'+currentUser)||'{}'); 
+    jugadores=data.jugadores||[]; partidos=data.partidos||[]; entrenos=data.entrenos||[]; xgTotal=data.xgTotal||0; tiros=data.tiros||[];
+}
 
 async function hashPassword(pw){
     const msgUint8 = new TextEncoder().encode(pw);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
-function saveUserData(){ localStorage.setItem('userData_'+currentUser, JSON.stringify({jugadores,partidos,entrenos,xgTotal})); }
-function loadUserData(){ const data = JSON.parse(localStorage.getItem('userData_'+currentUser)||'{}'); jugadores=data.jugadores||[]; partidos=data.partidos||[]; entrenos=data.entrenos||[]; xgTotal=data.xgTotal||0; }
-async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return loginMsg.innerText="Campos vacíos"; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.style.color="green"; loginMsg.innerText="Creado, haz login"; }
-async function login(){ const u=loginUser.value.trim(), p=await hashPassword(loginPass.value); const users=JSON.parse(localStorage.getItem('users')||'{}'); if(users[u]===p){ currentUser=u; loginDiv.classList.add('hidden'); app.classList.remove('hidden'); sidebar.classList.remove('hidden'); loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); calcular(); } else { loginMsg.innerText="Error de acceso"; } }
-function switchTab(i){ document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i)); document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('hidden',idx!==i)); }
+async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.innerText="Registrado."; }
+async function login(){ 
+    const u=loginUser.value.trim(), p=await hashPassword(loginPass.value); 
+    const users=JSON.parse(localStorage.getItem('users')||'{}'); 
+    if(users[u]===p){ currentUser=u; loginDiv.classList.add('hidden'); app.classList.remove('hidden'); sidebar.classList.remove('hidden'); loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); drawField(); actualizarDisplay(); } 
+}
 
-// ---- JUGADORES ----
+function switchTab(i){ 
+    document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i)); 
+    document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('hidden',idx!==i)); 
+    if(i===3) calcular();
+    if(i===2) { setTimeout(drawField, 50); }
+}
+
 function addJugador(){ if(!nombre.value) return; jugadores.push({nombre:nombre.value,g:0,a:0,pj:0,min:0,am:0,r:0}); nombre.value=""; renderJugadores(); renderSelect(); saveUserData(); }
-function renderJugadores(){ tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr><td>${j.nombre}</td><td contenteditable oninput="jugadores[${i}].g=this.innerText;saveUserData()">${j.g}</td><td contenteditable oninput="jugadores[${i}].a=this.innerText;saveUserData()">${j.a}</td><td contenteditable oninput="jugadores[${i}].pj=this.innerText;saveUserData()">${j.pj}</td><td contenteditable oninput="jugadores[${i}].min=this.innerText;saveUserData()">${j.min}</td><td contenteditable oninput="jugadores[${i}].am=this.innerText;saveUserData()">${j.am}</td><td contenteditable oninput="jugadores[${i}].r=this.innerText;saveUserData()">${j.r}</td><td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td></tr>`).join(''); }
-function renderSelect(){ const html=jugadores.map(j=>`<option value="${j.nombre}">${j.nombre}</option>`).join(''); selectJugadores.innerHTML=html; filtroJugador.innerHTML=html; }
-
-// ---- PARTIDOS ----
-function addPartido(){ partidos.push({l:local.value, gl:gLocal.value, v:visitante.value, gv:gVisitante.value, d:desc.value}); renderPartidos(); saveUserData(); }
+function renderJugadores(){ tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr><td>${j.nombre}</td><td>${j.g}</td><td>${j.a}</td><td>${j.pj}</td><td>${j.min}</td><td>${j.am}</td><td>${j.r}</td><td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td></tr>`).join(''); }
+function renderSelect(){ const h=jugadores.map(j=>`<option value="${j.nombre}">${j.nombre}</option>`).join(''); selectJugadores.innerHTML=h; filtroJugador.innerHTML=h; }
+function addPartido(){ if(!local.value) return; partidos.push({l:local.value, gl:gLocal.value, v:visitante.value, gv:gVisitante.value, d:desc.value}); renderPartidos(); saveUserData(); }
 function renderPartidos(){ tablaPartidos.innerHTML=partidos.map((p,i)=>`<tr><td>${p.l} vs ${p.v}</td><td>${p.gl}-${p.gv}</td><td>${p.d}</td><td><button class="delete" onclick="partidos.splice(${i},1);renderPartidos();saveUserData()">❌</button></td></tr>`).join(''); }
 
-// ---- ENTRENOS & ACWR ----
 function toggleTodos(){ [...selectJugadores.options].forEach(o=>o.selected=!o.selected); }
-function addEntreno(){ let dur=parseInt(duracion.value), rpeV=parseInt(rpe.value), c=dur*rpeV; [...selectJugadores.selectedOptions].forEach(o=>entrenos.push({n:o.value, fecha:fecha.value, dur, rpe:rpeV, carga:c})); calcular(); saveUserData(); }
-function calcular(){ /* tu código existente de ACWR */ }
+function addEntreno(){
+    const d=parseInt(duracion.value), r=parseInt(rpe.value), f=fecha.value;
+    if(!d || !r || !f) return;
+    [...selectJugadores.selectedOptions].forEach(o => entrenos.push({n: o.value, fecha: f, carga: d*r}));
+    saveUserData(); calcular();
+}
 
-// ---- PESTAÑA XG ----
-let tiros=[];
-let tipoActual="normal";
-const campo=document.getElementById("campo");
-const ctx=campo.getContext("2d");
+function calcular(){
+    const jSel = filtroJugador.value; if(!jSel) return;
+    const misSesiones = entrenos.filter(e => e.n === jSel).sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
+    if(chartCarga) chartCarga.destroy();
+    chartCarga = new Chart(document.getElementById('graficaCarga'), {
+        type: 'bar', data: { labels: misSesiones.map(s=>s.fecha), datasets: [{label:'Carga Semanal', data: misSesiones.map(s=>s.carga), backgroundColor:'#2563eb'}]}
+    });
+    const labelsRatio = []; const dataRatio = [];
+    for(let i=14; i>=0; i--){
+        let d = new Date(); d.setDate(d.getDate()-i);
+        labelsRatio.push(d.toISOString().split('T')[0]);
+        dataRatio.push(obtenerRatio(jSel, d));
+    }
+    if(chartRatio) chartRatio.destroy();
+    chartRatio = new Chart(document.getElementById('graficaRatio'), {
+        type: 'line', data: { labels: labelsRatio, datasets: [{label:'Evolución Ratio ACWR', data: dataRatio, borderColor:'#10b981'}]}
+    });
+}
 
+function obtenerRatio(n, ref){
+    const a = entrenos.filter(e=>e.n===n && (ref-new Date(e.fecha))/(1000*3600*24)<=7 && (ref-new Date(e.fecha))>=0).reduce((acc,c)=>acc+c.carga,0);
+    const c = entrenos.filter(e=>e.n===n && (ref-new Date(e.fecha))/(1000*3600*24)<=28 && (ref-new Date(e.fecha))>=0).reduce((acc,c)=>acc+c.carga,0)/4;
+    return c>0 ? (a/c).toFixed(2) : 0;
+}
+
+// CAMPO xG CORREGIDO
+const campo=document.getElementById("campo"), ctx=campo.getContext("2d");
 document.querySelectorAll(".tipo-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
         document.querySelectorAll(".tipo-btn").forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-        tipoActual=btn.dataset.tipo;
+        btn.classList.add("active"); tipoActual=btn.dataset.tipo;
     });
 });
 
 function drawField(){
-    ctx.clearRect(0,0,campo.width,campo.height);
-    ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,campo.width,campo.height);
+    ctx.clearRect(0,0,350,500);
+    ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,350,500);
     ctx.strokeStyle="white"; ctx.lineWidth=2;
-    ctx.strokeRect(0,0,campo.width,campo.height);
-    // Área pequeña
-    ctx.strokeRect(campo.width/2 -36,0,72,18);
-    // Punto de penalti
+    // Borde
+    ctx.strokeRect(0,0,350,500);
+    // Área Grande
+    ctx.strokeRect(60, 0, 230, 80);
+    // Área Pequeña
+    ctx.strokeRect(125, 0, 100, 30);
+    // Punto Penalti
+    ctx.beginPath(); ctx.arc(175, 60, 2, 0, Math.PI*2); ctx.fillStyle="white"; ctx.fill();
+    // Media Luna (Semicírculo corregido)
     ctx.beginPath();
-    ctx.arc(campo.width/2, 12, 2, 0, Math.PI*2);
-    ctx.fillStyle="white"; ctx.fill();
-    // Círculo central
-    ctx.beginPath();
-    ctx.arc(campo.width/2, campo.height/2, 50, 0, Math.PI*2);
+    ctx.arc(175, 60, 45, 0.45, Math.PI - 0.45, false);
     ctx.stroke();
-    // Línea media
-    ctx.beginPath();
-    ctx.moveTo(0,campo.height/2); ctx.lineTo(campo.width,campo.height/2); ctx.stroke();
+    // Centro (Línea fondo simulada)
+    ctx.beginPath(); ctx.moveTo(0,500); ctx.lineTo(350,500); ctx.stroke();
 }
-
-drawField();
 
 function calcularXG(x,y,tipo){
     if(tipo==="penalti") return 0.78;
-    const porteriaX=campo.width/2, porteriaY=0;
-    const dx=x-porteriaX, dy=y-porteriaY;
-    const distancia=Math.sqrt(dx*dx+dy*dy);
-    const angulo=Math.atan2(50, Math.abs(dx));
-    let base=1/(1+Math.exp((distancia-100)/25))*(angulo/Math.PI*2);
-    switch(tipo){
-        case "balonparado": return Math.max(0.01, base*0.5);
-        case "cabeza": return Math.max(0.01, base*0.7);
-        default: return Math.max(0.01, base);
-    }
+    const dist=Math.sqrt(Math.pow(x-175,2)+Math.pow(y-0,2));
+    let val = 1/(1+Math.exp((dist-50)/15));
+    if(tipo==="cabeza") val *= 0.7;
+    return Math.max(0.01, val).toFixed(2);
 }
 
 campo.addEventListener("click",(e)=>{
     const rect=campo.getBoundingClientRect();
-    const x=e.clientX-rect.left;
-    const y=e.clientY-rect.top;
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
     const xg=calcularXG(x,y,tipoActual);
-    xgTotal+=xg;
-    tiros.push({x:x.toFixed(0), y:y.toFixed(0), xg:xg.toFixed(2), tipo:tipoActual});
-    actualizarDisplay();
+    xgTotal+=parseFloat(xg);
+    tiros.push({x:x.toFixed(0), y:y.toFixed(0), xg:xg, tipo:tipoActual});
+    actualizarDisplay(); saveUserData();
 });
 
 function actualizarDisplay(){
     document.getElementById("xgActual").innerText="Último tiro: "+(tiros.length?tiros[tiros.length-1].xg:"0,00");
     document.getElementById("xgTotalDisp").innerText="xG total: "+xgTotal.toFixed(2);
-    renderTabla();
+    document.getElementById("tablaTiros").innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="borrarTiro(${i})">❌</button></td></tr>`).join('');
     drawField();
     tiros.forEach(t=>{
-        ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.strokeStyle="black"; ctx.stroke();
+        ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.stroke();
     });
 }
-
-function renderTabla(){
-    const tablaTiros=document.getElementById("tablaTiros");
-    tablaTiros.innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="borrarTiro(${i})">❌</button></td></tr>`).join('');
-}
-
-function borrarTiro(index){
-    xgTotal-=parseFloat(tiros[index].xg);
-    tiros.splice(index,1);
-    actualizarDisplay();
-}
-
-function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); }
-
+function borrarTiro(i){ xgTotal-=parseFloat(tiros[i].xg); tiros.splice(i,1); actualizarDisplay(); saveUserData(); }
+function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); saveUserData(); }
 </script>
-
-<!-- --- Service Worker Registration --- -->
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log('Service Worker registrado'))
-    .catch(err => console.log('Error registrando Service Worker:', err));
-}
-</script>
-
 </body>
 </html>
