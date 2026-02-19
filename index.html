@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EliteCoach - Pro Performance</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
 :root {
@@ -36,15 +37,14 @@ input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius
 button { background: var(--secondary); color: white; border: none; cursor: pointer; font-weight: bold; }
 button:hover { background: #1e40af; }
 button.delete { background: #ef4444; width: auto; padding: 5px 10px; }
-button.toggle-btn { background: #64748b; margin-top: 10px; }
+button.export { background: #10b981; margin-top: 10px; }
 
 .hidden { display: none !important; }
+.ratio-badge { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.85rem; }
 
 #campo { background: #2e7d32; border: 3px solid white; cursor: crosshair; display:block; margin: 0 auto; }
-#tipoTiro { margin-top:10px; text-align:center; }
 .tipo-btn { padding:8px 12px; margin-right:5px; width: auto; display: inline-block; }
 .tipo-btn.active { background:#ef4444; color:white; }
-.delete-btn { background:#ef4444; color:white; padding:3px 6px; font-weight:bold; border-radius:3px; }
 </style>
 </head>
 <body>
@@ -66,9 +66,13 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
     <div class="nav-item" onclick="switchTab(1)"><i class="fas fa-trophy"></i> Partidos</div>
     <div class="nav-item" onclick="switchTab(2)"><i class="fas fa-bullseye"></i> Goles Esperados</div>
     <div class="nav-item" onclick="switchTab(3)"><i class="fas fa-chart-line"></i> Entrenamientos</div>
+    <div style="margin-top: auto; padding: 20px;">
+        <button class="export" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Exportar Datos</button>
+    </div>
 </nav>
 
 <main id="app" class="main-content hidden">
+
     <div id="tab0" class="tab-content">
         <div class="card">
             <h2>Plantilla de Jugadores</h2>
@@ -106,7 +110,7 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
     <div id="tab2" class="tab-content hidden">
         <div class="card">
             <h2>Goles Esperados (xG) - Simulador</h2>
-            <div id="tipoTiro">
+            <div id="tipoTiro" style="text-align:center;">
                 <button class="tipo-btn active" data-tipo="normal">Tiro Normal</button>
                 <button class="tipo-btn" data-tipo="penalti">Penalti</button>
                 <button class="tipo-btn" data-tipo="balonparado">Balón Parado</button>
@@ -142,26 +146,39 @@ button.toggle-btn { background: #64748b; margin-top: 10px; }
             </div>
             <button onclick="addEntreno()" style="margin-top: 10px;">Registrar Carga</button>
         </div>
+
         <div class="card">
-            <h2>Análisis de Carga</h2>
+            <h2>Análisis Individual (Ratio ACWR)</h2>
             <select id="filtroJugador" onchange="calcular()"></select>
             <canvas id="graficaCarga" height="150" style="margin-top:20px;"></canvas>
             <canvas id="graficaRatio" height="150" style="margin-top:20px;"></canvas>
+        </div>
+
+        <div class="card">
+            <h2>Resumen General de Plantilla</h2>
+            <table>
+                <thead>
+                    <tr><th>Jugador</th><th>Carga 7d</th><th>Media 28d</th><th>Ratio</th></tr>
+                </thead>
+                <tbody id="tablaResumenBody"></tbody>
+            </table>
         </div>
     </div>
 </main>
 
 <script>
-let currentUser = null, jugadores=[], partidos=[], entrenos=[], xgTotal=0, tiros=[];
+let currentUser = null, jugadores=[], partidos=[], entrenos=[], tiros=[], xgTotal=0;
 let chartCarga, chartRatio;
 let tipoActual = "normal";
 
-function saveUserData(){ localStorage.setItem('userData_'+currentUser, JSON.stringify({jugadores,partidos,entrenos,xgTotal,tiros})); }
+// PERSISTENCIA
+function saveUserData(){ localStorage.setItem('userData_'+currentUser, JSON.stringify({jugadores,partidos,entrenos,tiros,xgTotal})); }
 function loadUserData(){ 
     const data = JSON.parse(localStorage.getItem('userData_'+currentUser)||'{}'); 
-    jugadores=data.jugadores||[]; partidos=data.partidos||[]; entrenos=data.entrenos||[]; xgTotal=data.xgTotal||0; tiros=data.tiros||[];
+    jugadores=data.jugadores||[]; partidos=data.partidos||[]; entrenos=data.entrenos||[]; tiros=data.tiros||[]; xgTotal=data.xgTotal||0;
 }
 
+// LOGIN
 async function hashPassword(pw){
     const msgUint8 = new TextEncoder().encode(pw);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -173,54 +190,54 @@ async function login(){
     const users=JSON.parse(localStorage.getItem('users')||'{}'); 
     if(users[u]===p){ currentUser=u; loginDiv.classList.add('hidden'); app.classList.remove('hidden'); sidebar.classList.remove('hidden'); loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); drawField(); actualizarDisplay(); } 
 }
-
 function switchTab(i){ 
     document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i)); 
     document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('hidden',idx!==i)); 
     if(i===3) calcular();
-    if(i===2) { setTimeout(drawField, 50); }
+    if(i===2) setTimeout(drawField, 50);
 }
 
+// FUNCIONES JUGADORES/PARTIDOS
 function addJugador(){ if(!nombre.value) return; jugadores.push({nombre:nombre.value,g:0,a:0,pj:0,min:0,am:0,r:0}); nombre.value=""; renderJugadores(); renderSelect(); saveUserData(); }
 function renderJugadores(){ tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr><td>${j.nombre}</td><td>${j.g}</td><td>${j.a}</td><td>${j.pj}</td><td>${j.min}</td><td>${j.am}</td><td>${j.r}</td><td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td></tr>`).join(''); }
 function renderSelect(){ const h=jugadores.map(j=>`<option value="${j.nombre}">${j.nombre}</option>`).join(''); selectJugadores.innerHTML=h; filtroJugador.innerHTML=h; }
 function addPartido(){ if(!local.value) return; partidos.push({l:local.value, gl:gLocal.value, v:visitante.value, gv:gVisitante.value, d:desc.value}); renderPartidos(); saveUserData(); }
 function renderPartidos(){ tablaPartidos.innerHTML=partidos.map((p,i)=>`<tr><td>${p.l} vs ${p.v}</td><td>${p.gl}-${p.gv}</td><td>${p.d}</td><td><button class="delete" onclick="partidos.splice(${i},1);renderPartidos();saveUserData()">❌</button></td></tr>`).join(''); }
 
+// LÓGICA ENTRENAMIENTOS (CORREGIDA)
 function toggleTodos(){ [...selectJugadores.options].forEach(o=>o.selected=!o.selected); }
 function addEntreno(){
-    const d=parseInt(duracion.value), r=parseInt(rpe.value), f=fecha.value;
-    if(!d || !r || !f) return;
-    [...selectJugadores.selectedOptions].forEach(o => entrenos.push({n: o.value, fecha: f, carga: d*r}));
+    const dur=parseInt(duracion.value), rpeV=parseInt(rpe.value), f=fecha.value;
+    if(!dur || !rpeV || !f) return;
+    [...selectJugadores.selectedOptions].forEach(o => entrenos.push({n: o.value, fecha: f, carga: dur*rpeV}));
     saveUserData(); calcular();
 }
-
+function obtenerRatio(nombre, refStr){
+    const ref = new Date(refStr).getTime();
+    const aguda = entrenos.filter(e=>e.n===nombre && (ref - new Date(e.fecha).getTime()) >= 0 && (ref - new Date(e.fecha).getTime()) <= 7*86400000).reduce((a,c)=>a+c.carga,0);
+    const cronica = entrenos.filter(e=>e.n===nombre && (ref - new Date(e.fecha).getTime()) >= 0 && (ref - new Date(e.fecha).getTime()) <= 28*86400000).reduce((a,c)=>a+c.carga,0)/4;
+    return { aguda, cronica, ratio: cronica>0 ? (aguda/cronica).toFixed(2) : 0 };
+}
 function calcular(){
     const jSel = filtroJugador.value; if(!jSel) return;
-    const misSesiones = entrenos.filter(e => e.n === jSel).sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
+    const misSesiones = entrenos.filter(e=>e.n===jSel).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     if(chartCarga) chartCarga.destroy();
-    chartCarga = new Chart(document.getElementById('graficaCarga'), {
-        type: 'bar', data: { labels: misSesiones.map(s=>s.fecha), datasets: [{label:'Carga Semanal', data: misSesiones.map(s=>s.carga), backgroundColor:'#2563eb'}]}
-    });
-    const labelsRatio = []; const dataRatio = [];
-    for(let i=14; i>=0; i--){
-        let d = new Date(); d.setDate(d.getDate()-i);
-        labelsRatio.push(d.toISOString().split('T')[0]);
-        dataRatio.push(obtenerRatio(jSel, d));
+    chartCarga = new Chart(document.getElementById('graficaCarga'), { type:'bar', data:{labels:misSesiones.slice(-10).map(s=>s.fecha), datasets:[{label:'Carga', data:misSesiones.slice(-10).map(s=>s.carga), backgroundColor:'#2563eb'}]} });
+    const labelsR=[], dataR=[];
+    for(let i=14;i>=0;i--){
+        let d=new Date(); d.setDate(d.getDate()-i); let f=d.toISOString().split('T')[0];
+        labelsR.push(f); dataR.push(obtenerRatio(jSel, f).ratio);
     }
     if(chartRatio) chartRatio.destroy();
-    chartRatio = new Chart(document.getElementById('graficaRatio'), {
-        type: 'line', data: { labels: labelsRatio, datasets: [{label:'Evolución Ratio ACWR', data: dataRatio, borderColor:'#10b981'}]}
-    });
+    chartRatio = new Chart(document.getElementById('graficaRatio'), { type:'line', data:{labels:labelsR, datasets:[{label:'Ratio ACWR', data:dataR, borderColor:'#10b981'}]} });
+    const hoy = new Date().toISOString().split('T')[0];
+    tablaResumenBody.innerHTML = jugadores.map(j => {
+        let r = obtenerRatio(j.nombre, hoy);
+        return `<tr><td>${j.nombre}</td><td>${r.aguda}</td><td>${r.cronica.toFixed(0)}</td><td><span class="ratio-badge" style="background:${r.ratio>1.5?'red':r.ratio>1.2?'orange':'green'}">${r.ratio}</span></td></tr>`;
+    }).join('');
 }
 
-function obtenerRatio(n, ref){
-    const a = entrenos.filter(e=>e.n===n && (ref-new Date(e.fecha))/(1000*3600*24)<=7 && (ref-new Date(e.fecha))>=0).reduce((acc,c)=>acc+c.carga,0);
-    const c = entrenos.filter(e=>e.n===n && (ref-new Date(e.fecha))/(1000*3600*24)<=28 && (ref-new Date(e.fecha))>=0).reduce((acc,c)=>acc+c.carga,0)/4;
-    return c>0 ? (a/c).toFixed(2) : 0;
-}
-
-// CAMPO xG CORREGIDO
+// xG CAMPO REGLAMENTARIO
 const campo=document.getElementById("campo"), ctx=campo.getContext("2d");
 document.querySelectorAll(".tipo-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -228,55 +245,38 @@ document.querySelectorAll(".tipo-btn").forEach(btn=>{
         btn.classList.add("active"); tipoActual=btn.dataset.tipo;
     });
 });
-
 function drawField(){
-    ctx.clearRect(0,0,350,500);
-    ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,350,500);
+    ctx.clearRect(0,0,350,500); ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,350,500);
     ctx.strokeStyle="white"; ctx.lineWidth=2;
-    // Borde
-    ctx.strokeRect(0,0,350,500);
-    // Área Grande
-    ctx.strokeRect(60, 0, 230, 80);
-    // Área Pequeña
-    ctx.strokeRect(125, 0, 100, 30);
-    // Punto Penalti
-    ctx.beginPath(); ctx.arc(175, 60, 2, 0, Math.PI*2); ctx.fillStyle="white"; ctx.fill();
-    // Media Luna (Semicírculo corregido)
-    ctx.beginPath();
-    ctx.arc(175, 60, 45, 0.45, Math.PI - 0.45, false);
-    ctx.stroke();
-    // Centro (Línea fondo simulada)
+    ctx.strokeRect(0,0,350,500); // Borde
+    ctx.strokeRect(60,0,230,80); // Área Grande
+    ctx.strokeRect(125,0,100,30); // Área Chica
+    ctx.beginPath(); ctx.arc(175,60,2,0,Math.PI*2); ctx.fillStyle="white"; ctx.fill(); // Penalti
+    ctx.beginPath(); ctx.arc(175,60,45,0.45,Math.PI-0.45); ctx.stroke(); // Media Luna
     ctx.beginPath(); ctx.moveTo(0,500); ctx.lineTo(350,500); ctx.stroke();
 }
-
-function calcularXG(x,y,tipo){
-    if(tipo==="penalti") return 0.78;
-    const dist=Math.sqrt(Math.pow(x-175,2)+Math.pow(y-0,2));
-    let val = 1/(1+Math.exp((dist-50)/15));
-    if(tipo==="cabeza") val *= 0.7;
-    return Math.max(0.01, val).toFixed(2);
-}
-
 campo.addEventListener("click",(e)=>{
-    const rect=campo.getBoundingClientRect();
-    const x=e.clientX-rect.left, y=e.clientY-rect.top;
-    const xg=calcularXG(x,y,tipoActual);
-    xgTotal+=parseFloat(xg);
-    tiros.push({x:x.toFixed(0), y:y.toFixed(0), xg:xg, tipo:tipoActual});
+    const r=campo.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+    const xg= (tipoActual==="penalti") ? 0.78 : (1/(1+Math.exp((Math.sqrt(Math.pow(x-175,2)+Math.pow(y,2))-50)/15))).toFixed(2);
+    xgTotal+=parseFloat(xg); tiros.push({x:x.toFixed(0), y:y.toFixed(0), xg, tipo:tipoActual});
     actualizarDisplay(); saveUserData();
 });
-
 function actualizarDisplay(){
     document.getElementById("xgActual").innerText="Último tiro: "+(tiros.length?tiros[tiros.length-1].xg:"0,00");
     document.getElementById("xgTotalDisp").innerText="xG total: "+xgTotal.toFixed(2);
-    document.getElementById("tablaTiros").innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="borrarTiro(${i})">❌</button></td></tr>`).join('');
-    drawField();
-    tiros.forEach(t=>{
-        ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.stroke();
-    });
+    document.getElementById("tablaTiros").innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="tiros.splice(${i},1);actualizarDisplay();saveUserData()">❌</button></td></tr>`).join('');
+    drawField(); tiros.forEach(t=>{ ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.stroke(); });
 }
-function borrarTiro(i){ xgTotal-=parseFloat(tiros[i].xg); tiros.splice(i,1); actualizarDisplay(); saveUserData(); }
 function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); saveUserData(); }
+
+// EXPORTAR A EXCEL
+function exportToExcel(){
+    const wb = XLSX.utils.book_new();
+    const wsJ = XLSX.utils.json_to_sheet(jugadores); XLSX.utils.book_append_sheet(wb, wsJ, "Plantilla");
+    const wsP = XLSX.utils.json_to_sheet(partidos); XLSX.utils.book_append_sheet(wb, wsP, "Partidos");
+    const wsE = XLSX.utils.json_to_sheet(entrenos); XLSX.utils.book_append_sheet(wb, wsE, "Cargas");
+    XLSX.writeFile(wb, `EliteCoach_${currentUser}.xlsx`);
+}
 </script>
 </body>
 </html>
