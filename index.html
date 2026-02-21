@@ -199,11 +199,32 @@ async function hashPassword(pw){
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.style.color="green"; loginMsg.innerText="Registrado."; }
+
 async function login(){ 
-    const u=loginUser.value.trim(), p=await hashPassword(loginPass.value); 
-    const users=JSON.parse(localStorage.getItem('users')||'{}'); 
-    if(users[u]===p){ currentUser=u; loginDiv.classList.add('hidden'); app.classList.remove('hidden'); sidebar.classList.remove('hidden'); loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); drawField(); actualizarDisplay(); } 
+    const u = loginUser.value.trim();
+    const pInput = loginPass.value;
+
+    // Lógica especial para Diseñador
+    if (u === "Diseñador" && pInput === "") {
+        loginMsg.style.color = "blue";
+        loginMsg.innerText = "DISEÑADOR: ADRIÁN MORÁN CAROU";
+        return;
+    }
+
+    const p = await hashPassword(pInput); 
+    const users = JSON.parse(localStorage.getItem('users')||'{}'); 
+    if(users[u] === p){ 
+        currentUser = u; 
+        loginDiv.classList.add('hidden'); 
+        app.classList.remove('hidden'); 
+        sidebar.classList.remove('hidden'); 
+        loadUserData(); renderJugadores(); renderSelect(); renderPartidos(); drawField(); actualizarDisplay(); 
+    } else {
+        loginMsg.style.color = "red";
+        loginMsg.innerText = "Usuario o contraseña incorrectos.";
+    }
 }
+
 function switchTab(i){ 
     document.querySelectorAll('.nav-item').forEach((t,idx)=>t.classList.toggle('active',idx===i)); 
     document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('hidden',idx!==i)); 
