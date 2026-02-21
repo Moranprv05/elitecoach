@@ -38,6 +38,7 @@ button { background: var(--secondary); color: white; border: none; cursor: point
 button:hover { background: #1e40af; }
 button.delete { background: #ef4444; width: auto; padding: 5px 10px; }
 button.export { background: #10b981; margin-top: 10px; }
+button.toggle-btn { background: #64748b; margin-top: 10px; }
 
 .hidden { display: none !important; }
 .ratio-badge { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.85rem; }
@@ -67,12 +68,11 @@ button.export { background: #10b981; margin-top: 10px; }
     <div class="nav-item" onclick="switchTab(2)"><i class="fas fa-bullseye"></i> Goles Esperados</div>
     <div class="nav-item" onclick="switchTab(3)"><i class="fas fa-chart-line"></i> Entrenamientos</div>
     <div style="margin-top: auto; padding: 20px;">
-        <button class="export" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Exportar Datos</button>
+        <button class="export" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Exportar Datos PRO</button>
     </div>
 </nav>
 
 <main id="app" class="main-content hidden">
-
     <div id="tab0" class="tab-content">
         <div class="card">
             <h2>Plantilla de Jugadores</h2>
@@ -150,6 +150,20 @@ button.export { background: #10b981; margin-top: 10px; }
         <div class="card">
             <h2>Análisis Individual (Ratio ACWR)</h2>
             <select id="filtroJugador" onchange="calcular()"></select>
+            
+            <button class="toggle-btn" onclick="document.getElementById('historialSesionesCont').classList.toggle('hidden')">
+                <i class="fas fa-list"></i> Mostrar/Ocultar Historial de Sesiones
+            </button>
+            
+            <div id="historialSesionesCont" class="hidden" style="margin-top: 15px;">
+                <table>
+                    <thead>
+                        <tr><th>Fecha</th><th>Carga</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody id="tablaHistorialSesiones"></tbody>
+                </table>
+            </div>
+            
             <canvas id="graficaCarga" height="150" style="margin-top:20px;"></canvas>
             <canvas id="graficaRatio" height="150" style="margin-top:20px;"></canvas>
         </div>
@@ -184,7 +198,7 @@ async function hashPassword(pw){
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
-async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.innerText="Registrado."; }
+async function register(){ const u=loginUser.value.trim(), p=loginPass.value; if(!u||!p) return; let users=JSON.parse(localStorage.getItem('users')||'{}'); users[u]=await hashPassword(p); localStorage.setItem('users',JSON.stringify(users)); loginMsg.style.color="green"; loginMsg.innerText="Registrado."; }
 async function login(){ 
     const u=loginUser.value.trim(), p=await hashPassword(loginPass.value); 
     const users=JSON.parse(localStorage.getItem('users')||'{}'); 
@@ -199,12 +213,42 @@ function switchTab(i){
 
 // FUNCIONES JUGADORES/PARTIDOS
 function addJugador(){ if(!nombre.value) return; jugadores.push({nombre:nombre.value,g:0,a:0,pj:0,min:0,am:0,r:0}); nombre.value=""; renderJugadores(); renderSelect(); saveUserData(); }
-function renderJugadores(){ tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr><td>${j.nombre}</td><td>${j.g}</td><td>${j.a}</td><td>${j.pj}</td><td>${j.min}</td><td>${j.am}</td><td>${j.r}</td><td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td></tr>`).join(''); }
+
+function handleEdit(element, index, field) {
+    let input = element.innerText.trim();
+    let currentVal = parseFloat(jugadores[index][field]) || 0;
+    if (input.startsWith('+')) {
+        let valToAdd = parseFloat(input.substring(1));
+        if (!isNaN(valToAdd)) jugadores[index][field] = currentVal + valToAdd;
+    } else if (input.startsWith('-')) {
+        let valToSub = parseFloat(input.substring(1));
+        if (!isNaN(valToSub)) jugadores[index][field] = currentVal - valToSub;
+    } else {
+        let parsedVal = parseFloat(input);
+        if (!isNaN(parsedVal)) jugadores[index][field] = parsedVal;
+    }
+    element.innerText = jugadores[index][field];
+    saveUserData();
+}
+
+function renderJugadores(){ 
+    tablaJugadores.innerHTML = jugadores.map((j,i)=>`<tr>
+        <td>${j.nombre}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'g')">${j.g}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'a')">${j.a}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'pj')">${j.pj}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'min')">${j.min}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'am')">${j.am}</td>
+        <td contenteditable onblur="handleEdit(this, ${i}, 'r')">${j.r}</td>
+        <td><button class="delete" onclick="jugadores.splice(${i},1);renderJugadores();saveUserData()">❌</button></td>
+    </tr>`).join(''); 
+}
+
 function renderSelect(){ const h=jugadores.map(j=>`<option value="${j.nombre}">${j.nombre}</option>`).join(''); selectJugadores.innerHTML=h; filtroJugador.innerHTML=h; }
 function addPartido(){ if(!local.value) return; partidos.push({l:local.value, gl:gLocal.value, v:visitante.value, gv:gVisitante.value, d:desc.value}); renderPartidos(); saveUserData(); }
 function renderPartidos(){ tablaPartidos.innerHTML=partidos.map((p,i)=>`<tr><td>${p.l} vs ${p.v}</td><td>${p.gl}-${p.gv}</td><td>${p.d}</td><td><button class="delete" onclick="partidos.splice(${i},1);renderPartidos();saveUserData()">❌</button></td></tr>`).join(''); }
 
-// LÓGICA ENTRENAMIENTOS (CORREGIDA)
+// LÓGICA ENTRENAMIENTOS
 function toggleTodos(){ [...selectJugadores.options].forEach(o=>o.selected=!o.selected); }
 function addEntreno(){
     const dur=parseInt(duracion.value), rpeV=parseInt(rpe.value), f=fecha.value;
@@ -212,6 +256,15 @@ function addEntreno(){
     [...selectJugadores.selectedOptions].forEach(o => entrenos.push({n: o.value, fecha: f, carga: dur*rpeV}));
     saveUserData(); calcular();
 }
+
+function deleteEntreno(index, jSel) {
+    let globalIndex = -1; let count = 0;
+    for (let i = 0; i < entrenos.length; i++) {
+        if (entrenos[i].n === jSel) { if (count === index) { globalIndex = i; break; } count++; }
+    }
+    if (globalIndex > -1) { entrenos.splice(globalIndex, 1); saveUserData(); calcular(); }
+}
+
 function obtenerRatio(nombre, refStr){
     const ref = new Date(refStr).getTime();
     const aguda = entrenos.filter(e=>e.n===nombre && (ref - new Date(e.fecha).getTime()) >= 0 && (ref - new Date(e.fecha).getTime()) <= 7*86400000).reduce((a,c)=>a+c.carga,0);
@@ -221,6 +274,8 @@ function obtenerRatio(nombre, refStr){
 function calcular(){
     const jSel = filtroJugador.value; if(!jSel) return;
     const misSesiones = entrenos.filter(e=>e.n===jSel).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const tablaHistorial = document.getElementById('tablaHistorialSesiones');
+    tablaHistorial.innerHTML = misSesiones.map((s, i) => `<tr><td>${s.fecha}</td><td>${s.carga}</td><td><button class="delete" onclick="deleteEntreno(${i}, '${jSel}')">❌</button></td></tr>`).join('');
     if(chartCarga) chartCarga.destroy();
     chartCarga = new Chart(document.getElementById('graficaCarga'), { type:'bar', data:{labels:misSesiones.slice(-10).map(s=>s.fecha), datasets:[{label:'Carga', data:misSesiones.slice(-10).map(s=>s.carga), backgroundColor:'#2563eb'}]} });
     const labelsR=[], dataR=[];
@@ -248,11 +303,9 @@ document.querySelectorAll(".tipo-btn").forEach(btn=>{
 function drawField(){
     ctx.clearRect(0,0,350,500); ctx.fillStyle="#2e7d32"; ctx.fillRect(0,0,350,500);
     ctx.strokeStyle="white"; ctx.lineWidth=2;
-    ctx.strokeRect(0,0,350,500); // Borde
-    ctx.strokeRect(60,0,230,80); // Área Grande
-    ctx.strokeRect(125,0,100,30); // Área Chica
-    ctx.beginPath(); ctx.arc(175,60,2,0,Math.PI*2); ctx.fillStyle="white"; ctx.fill(); // Penalti
-    ctx.beginPath(); ctx.arc(175,60,45,0.45,Math.PI-0.45); ctx.stroke(); // Media Luna
+    ctx.strokeRect(0,0,350,500); ctx.strokeRect(60,0,230,80); ctx.strokeRect(125,0,100,30);
+    ctx.beginPath(); ctx.arc(175,60,2,0,Math.PI*2); ctx.fillStyle="white"; ctx.fill();
+    ctx.beginPath(); ctx.arc(175,60,45,0.45,Math.PI-0.45); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,500); ctx.lineTo(350,500); ctx.stroke();
 }
 campo.addEventListener("click",(e)=>{
@@ -264,18 +317,59 @@ campo.addEventListener("click",(e)=>{
 function actualizarDisplay(){
     document.getElementById("xgActual").innerText="Último tiro: "+(tiros.length?tiros[tiros.length-1].xg:"0,00");
     document.getElementById("xgTotalDisp").innerText="xG total: "+xgTotal.toFixed(2);
-    document.getElementById("tablaTiros").innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" onclick="tiros.splice(${i},1);actualizarDisplay();saveUserData()">❌</button></td></tr>`).join('');
+    document.getElementById("tablaTiros").innerHTML=tiros.map((t,i)=>`<tr><td>${i+1}</td><td>${t.x}</td><td>${t.y}</td><td>${t.tipo}</td><td>${t.xg}</td><td><button class="delete-btn" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:5px;" onclick="tiros.splice(${i},1); xgTotal-=parseFloat(${t.xg}); actualizarDisplay(); saveUserData()">❌</button></td></tr>`).join('');
     drawField(); tiros.forEach(t=>{ ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle="yellow"; ctx.fill(); ctx.stroke(); });
 }
 function resetXG(){ xgTotal=0; tiros=[]; actualizarDisplay(); saveUserData(); }
 
-// EXPORTAR A EXCEL
+// ==========================================
+// EXPORTACIÓN EXCEL - SÓLO PRIMERAS DOS PESTAÑAS
+// ==========================================
 function exportToExcel(){
     const wb = XLSX.utils.book_new();
-    const wsJ = XLSX.utils.json_to_sheet(jugadores); XLSX.utils.book_append_sheet(wb, wsJ, "Plantilla");
-    const wsP = XLSX.utils.json_to_sheet(partidos); XLSX.utils.book_append_sheet(wb, wsP, "Partidos");
-    const wsE = XLSX.utils.json_to_sheet(entrenos); XLSX.utils.book_append_sheet(wb, wsE, "Cargas");
-    XLSX.writeFile(wb, `EliteCoach_${currentUser}.xlsx`);
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // 1. Hoja de Plantilla: Renombrar campos para que sean entendibles
+    const dataPlantilla = jugadores.map(j => ({
+        "Nombre del Jugador": j.nombre,
+        "Goles": j.g,
+        "Asistencias": j.a,
+        "Partidos Jugados": j.pj,
+        "Minutos Totales": j.min,
+        "Tarjetas Amarillas": j.am,
+        "Tarjetas Rojas": j.r
+    }));
+    const wsJ = XLSX.utils.json_to_sheet(dataPlantilla);
+    XLSX.utils.book_append_sheet(wb, wsJ, "Plantilla y Estadísticas");
+
+    // 2. Hoja de Cargas y Ratios (ACWR) - Muy útil para el preparador físico
+    const dataCargas = jugadores.map(j => {
+        const r = obtenerRatio(j.nombre, hoy);
+        let riesgo = "Bajo";
+        if(r.ratio > 1.5) riesgo = "MUY ALTO (Peligro Lesión)";
+        else if(r.ratio > 1.2) riesgo = "Moderado (Fatiga)";
+        
+        return {
+            "Jugador": j.nombre,
+            "Carga Últimos 7 días": r.aguda,
+            "Carga Media (Crónica)": r.cronica.toFixed(0),
+            "Ratio ACWR": r.ratio,
+            "Estado de Riesgo": riesgo
+        };
+    });
+    const wsC = XLSX.utils.json_to_sheet(dataCargas);
+    XLSX.utils.book_append_sheet(wb, wsC, "Riesgo Lesiones (ACWR)");
+
+    // Ajustar anchos de columna automáticamente (aproximado)
+    [wsJ, wsC].forEach(ws => {
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        ws['!cols'] = [];
+        for (let i = 0; i <= range.e.c; i++) {
+            ws['!cols'].push({ wch: 20 });
+        }
+    });
+
+    XLSX.writeFile(wb, `Reporte_EliteCoach_${currentUser}_${hoy}.xlsx`);
 }
 </script>
 </body>
